@@ -8,8 +8,13 @@ A small, header-first C++ framework for low-overhead, in-process latency measure
 - Keep hot-path overhead < 100 ns and zero allocations.
 - Simple multi-threaded aggregation with a path to TLS-based sinks in later versions.
 
-## Quickstart (conceptual)
-- Header-only usage is the primary target. Typical usage is RAII-based:
+## Timing Source
+
+V1 uses `std::chrono::steady_clock` to guarantee monotonic,
+OS-stable timestamps suitable for tail-latency analysis.
+
+Raw CPU counters (rdtsc) are intentionally deferred to later
+versions to avoid calibration and cross-core issues.
 
 ```cpp
 // pseudo: include the public header (implementation pending)
