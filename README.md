@@ -16,6 +16,13 @@ OS-stable timestamps suitable for tail-latency analysis.
 Raw CPU counters (rdtsc) are intentionally deferred to later
 versions to avoid calibration and cross-core issues.
 
+## Scoped Timing
+
+Latency is measured using an RAII-based `ScopedTimer`.
+Timing starts on construction and is recorded on destruction,
+ensuring correctness even with early returns or exceptions.
+
+
 ```cpp
 // pseudo: include the public header (implementation pending)
 #include "latency_metrics.h"

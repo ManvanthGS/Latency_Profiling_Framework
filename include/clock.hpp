@@ -2,14 +2,16 @@
 
 #include <cstdint>
 
-namespace Profiler {
+namespace Profiler
+{
 
-using time_stamp_ns = uint64_t;
+using TimestampNs = uint64_t;
 
-class Clock {
-public:
+class Clock
+{
+  public:
     // Returns monotonic timestamp in nanoseconds
-    static time_stamp_ns Now();
+    static TimestampNs Now();
 };
 
 } // namespace Profiler

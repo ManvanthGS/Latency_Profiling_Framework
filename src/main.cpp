@@ -1,9 +1,10 @@
-#include <iostream>
-#include <cassert>
 #include "clock.hpp"
+#include <cassert>
+#include <iostream>
 
-int main() {
-    Profiler::time_stamp_ns timestamp = Profiler::Clock::Now();
+int main()
+{
+    Profiler::TimestampNs timestamp = Profiler::Clock::Now();
     std::cout << "Current monotonic timestamp (ns): " << timestamp << std::endl;
 
     auto t1 = Profiler::Clock::Now();
