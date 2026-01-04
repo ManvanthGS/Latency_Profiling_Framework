@@ -46,6 +46,16 @@ upper bounds to prevent underestimating tail latency.
 In V1 the buckets and bucket size is hardcoded
 TODO: enable user to configure buckets and bucket size
 
+## Reporting
+
+Profiling results are exported via immutable snapshots.
+Reporting is fully decoupled from measurement and aggregation,
+ensuring no impact on hot-path latency.
+
+Supported formats:
+- Human-readable text
+- CSV (for offline analysis)
+
 
 ```cpp
 // pseudo: include the public header (implementation pending)

@@ -12,10 +12,13 @@ namespace Profiler
 struct MetricSnapshot
 {
     uint64_t count;
+
     double mean_ns;
     double variance_ns;
+
     uint64_t min_ns;
     uint64_t max_ns;
+
     uint64_t p50_ns;
     uint64_t p95_ns;
     uint64_t p99_ns;
