@@ -1,94 +1,296 @@
-# Latency Profiling Framework — DESIGN.md
+# Design Document — Latency Profiling Framework (V1)
 
-## V1 — Core Scope (V1: Implement and ship)
-### One-line goal
-Provide low-overhead, in-process latency measurement with accurate tail statistics (p50/p95/p99) for performance-critical C++ code paths.
+## 1. Objective
 
-### What this framework IS (V1)
-- Scoped, RAII-based timing for measuring execution latency of code scopes/functions.
-- Focus on hot paths (order book, event dispatch, matching logic).
-- Multi-threaded support with end-of-run reporting (text + CSV).
-- Header-first design; optional .cpp for heavy logic. CMake-friendly.
+The goal of this framework is to provide **accurate, low-overhead latency
+profiling** for performance-critical C++ systems, with a strong emphasis on
+**tail latency** rather than averages.
 
-### Measurement model (V1)
-- RAII scope timers: start on construction, stop on destruction.
-- No required stop calls (works with exceptions/early returns).
-- Internal storage: nanoseconds. Percentiles computed in ns; reporting can format ns/µs/ms.
+It is intended for:
+- Low-latency and real-time systems
+- Quantitative trading infrastructure
+- Performance-sensitive backend services
 
-### Metrics collected (V1)
-For each measured scope/component:
-- Count, Min, Max, Mean, Std deviation, p50, p95, p99
-Notes: p99.9 and external histograms are out of scope for V1.
+---
 
-### Percentile strategy (V1)
-- Fixed bucket histogram with deterministic memory usage.
-- Percentiles derived from cumulative bucket counts.
-- No dynamic bucket resizing in V1.
+## 2. Core Design Principles
 
-### Threading model (V1)
-- Thread-safe aggregation.
-- V1 implementation: simple mutex-protected global registry OR thread-local sinks merged at report time.
-- API designed so swapping mutex → TLS does not change user code.
+1. Correctness before optimization
+2. Deterministic behavior
+3. No hot-path I/O or allocation
+4. Clear separation of responsibilities
+5. Explicit ownership and lifetimes
+6. Zero cost when disabled
 
-### Performance constraints (hard, V1)
-- No dynamic allocation in hot path.
-- Scoped timing overhead < 100 ns target.
-- Recording is O(1).
+---
 
-### Reporting (V1)
-- End-of-run only.
-- Output: human-readable text + CSV.
-- Example snippet:
-  [Latency] OrderBook::AddOrder
-  Count: 4,812,903
-  Mean: 410 ns
-  p95: 720 ns
-  p99: 1.9 µs
-  Max: 8.4 µs
+## 3. High-Level Architecture
 
-### Build & Integration (V1)
-- Header-first; optional small .cpp.
-- Works with CMake.
-- No external dependencies beyond minimal STL.
+```
 
-## Explicit NON-SCOPE (Intentional for V1)
-- No live/real-time visualization or dashboards.
-- No distributed tracing or cross-process correlation.
-- No per-event logs, flame graphs, or timeline reconstruction.
-- No adaptive/dynamic histogram resizing.
-- No third-party libs (no Boost, no external histogram libraries).
++------------------------------+
+|          User Code           |
+|  PROFILER_SCOPE("Component") |
++---------------+--------------+
+                |
+                v
++---------------+--------------+
+|          ScopedTimer         |
+|   (RAII timing boundary)     |
++---------------+--------------+
+                |
+                v
++---------------+--------------+
+|          MetricSink          |
+|   - OnlineStats              |
+|   - LatencyHistogram         |
++---------------+--------------+
+                |
+                v
++---------------+--------------+
+|        MetricRegistry        |
+|   (ownership & lifecycle)    |
++---------------+--------------+
+                |
+                v
++---------------+--------------+
+|            Reporter          |
+|        (text / CSV)          |
++------------------------------+
 
-## V2 — Performance & Scalability Upgrade (post-V1)
-**Additions**
-- Thread-local metric sinks (TLS).
-- Lock-free or wait-free aggregation.
-- Better percentile accuracy (HDR-style buckets).
-- Configurable bucket layouts.
+```
 
-**Why V2 exists**
-- Reduce contention under high thread counts.
-- Improve p99 stability.
+---
 
-## V3 — System-Level Profiling (optional, advanced)
-**Additions**
-- Per-core statistics
-- CPU affinity awareness
-- NUMA-aware aggregation
-- Per-phase metrics (decode / match / publish)
+## 4. Measurement Layer
 
-Notes: This is HFT-grade territory and optional after V2 stabilization.
+### 4.1 Clock Abstraction
 
-## V4 — Tooling & Integration (optional)
-**Additions**
-- JSON output
-- Diff-based regression comparison
-- CLI tool to compare two runs
+- Uses `std::chrono::steady_clock`
+- Monotonic and immune to system time changes
+- Nanosecond resolution
+- Chosen for correctness and portability
 
-## Naming guidance
-Prefer boring, professional names:
-- latency_metrics, perf_latency, rt_latency
+Raw CPU cycle counters are intentionally deferred to later versions.
 
-## Quick implementation notes / constraints (reminder)
-- Keep hot path zero/allocation-free.
-- Design APIs to allow swapping underlying aggregation (mutex ↔ TLS) with minimal caller changes.
-- Prefer deterministic memory usage for histograms in V1.
+---
+
+### 4.2 Scoped RAII Timer
+
+Latency measurement is bound to lexical scope using RAII.
+
+Properties:
+- Timing starts in the constructor
+- Timing ends in the destructor
+- Destructor is `noexcept`
+- Copy and move operations are disabled
+
+This guarantees:
+- Exactly-once measurement
+- Safety with early returns
+- Correct behavior during exception unwinding
+- No misuse by callers
+
+---
+
+## 5. Aggregation Layer
+
+### 5.1 MetricSink
+
+`MetricSink` is the aggregation boundary for a single metric.
+
+Responsibilities:
+- Accept latency samples
+- Maintain online statistics
+- Maintain a latency histogram
+- Produce immutable snapshots
+
+Non-responsibilities:
+- No timing
+- No formatting
+- No I/O
+
+Each sink owns its own mutex to protect internal invariants.
+
+---
+
+### 5.2 Online Statistics
+
+Mean and variance are computed using **Welford’s algorithm**.
+
+Properties:
+- Single-pass
+- Numerically stable
+- No raw sample storage
+
+Tracked values:
+- Count
+- Mean
+- Variance
+- Min
+- Max
+
+---
+
+### 5.3 Latency Histogram
+
+Percentiles are computed using a **fixed-bucket histogram**.
+
+Design choices:
+- Fixed bucket ranges
+- Deterministic memory usage
+- O(1) updates
+- Conservative percentile estimation
+
+Percentiles return the **upper bound of the bucket** to avoid
+underestimating tail latency.
+
+---
+
+## 6. Registry Layer
+
+### 6.1 MetricRegistry
+
+The registry:
+- Owns all `MetricSink` instances
+- Maps metric names to sinks
+- Controls sink lifetime
+- Provides bulk reporting
+
+Internal storage:
+```
+
+unordered_map<string, unique_ptr<MetricSink>>
+
+```
+
+Rationale:
+- `MetricSink` contains a mutex and is non-movable
+- Stable sink addresses are required
+- Explicit ownership is preserved
+
+The registry mutex protects:
+- Map structure
+- Sink creation
+- Iteration during reporting
+
+---
+
+## 7. Reporting Layer
+
+Reporting operates exclusively on **snapshots**.
+
+Flow:
+```
+
+MetricSink
+-> Snapshot()
+-> Reporter
+-> Text / CSV
+
+````
+
+Properties:
+- Locks are held only during snapshot creation
+- Formatting and I/O are lock-free
+- Reporting never touches hot paths
+
+---
+
+## 8. User-Facing API
+
+A macro façade provides ergonomic instrumentation.
+
+```cpp
+PROFILER_SCOPE("Component::Operation");
+````
+
+Internally, this:
+
+* Expands to a `ScopedTimer`
+* Retrieves the sink from the registry
+* Preserves RAII semantics
+
+This makes instrumentation:
+
+* One-line
+* Impossible to misuse
+* Zero-overhead when disabled
+
+---
+
+## 9. Compile-Time Control
+
+Profiling is controlled via `PROFILER_ENABLE`.
+
+When disabled:
+
+* Macros expand to no-ops
+* No objects are instantiated
+* No runtime branches exist
+
+This guarantees zero runtime cost in production builds.
+
+---
+
+## 10. Threading Model (V1)
+
+* Registry mutex protects global structure
+* Sink mutex protects per-metric aggregation
+* No global serialization of metrics
+
+This design prioritizes correctness and clarity. Contention elimination
+is deferred to V2.
+
+---
+
+## 11. Explicit Non-Goals (V1)
+
+* Live tracing
+* Event timelines
+* Distributed tracing
+* Background worker threads
+* Dynamic histogram resizing
+
+These are intentionally excluded to preserve determinism.
+
+---
+
+## 12. Version Evolution Strategy
+
+### V2 — Scalability
+
+* Thread-local sinks
+* Lock-free hot paths
+* Snapshot-time merging
+
+### V3 — Precision
+
+* CPU cycle counters (`rdtsc`)
+* Calibration
+* Pluggable clock strategies
+
+### V4 — Distribution Accuracy
+
+* HDR or logarithmic histograms
+* Higher-order percentiles
+
+### V5 — Tooling
+
+* Regression comparison
+* CI integration
+* Performance baselines
+
+---
+
+## 13. Design Philosophy Summary
+
+This framework is designed to:
+
+* Make performance measurable
+* Make tail latency visible
+* Make misuse impossible
+* Enable data-driven optimization
+
+V1 establishes a clean, correct foundation on which higher-performance
+features can be safely built.

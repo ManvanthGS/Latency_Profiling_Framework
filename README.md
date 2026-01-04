@@ -1,113 +1,143 @@
-# latency_metrics — Latency Profiling Framework
+# Latency Profiling Framework (V1)
 
-A small, header-first C++ framework for low-overhead, in-process latency measurement aimed at performance-critical code paths (order book, event dispatch, matching logic). It provides RAII scoped timers, fixed-bucket histograms with nanosecond resolution, and end-of-run reporting (human-readable text and CSV). The V1 design prioritizes deterministic performance: no dynamic allocation in hot paths, O(1) recording, and predictable memory use.
+A low-overhead C++ latency profiling framework for performance-critical and
+low-latency systems.
 
-## Goals
-- Record scope/function latency with nanosecond precision.
-- Produce accurate tail statistics: p50, p95, p99.
-- Keep hot-path overhead < 100 ns and zero allocations.
-- Simple multi-threaded aggregation with a path to TLS-based sinks in later versions.
+This framework measures what actually matters in real systems: **tail
+latency**. It uses RAII-based scoped timing, online aggregation, and percentile
+analysis (p50 / p95 / p99), while compiling to **zero cost when disabled**.
 
-## Timing Source
+V1 focuses on correctness, determinism, and clean architecture. It is meant to
+be a solid foundation for future high-performance extensions.
 
-V1 uses `std::chrono::steady_clock` to guarantee monotonic,
-OS-stable timestamps suitable for tail-latency analysis.
+---
 
-Raw CPU counters (rdtsc) are intentionally deferred to later
-versions to avoid calibration and cross-core issues.
+## Key Features (V1)
 
-## Scoped Timing
+- RAII-based scoped latency measurement
+- Monotonic, stable clock source
+- Online statistics (no raw sample storage)
+- Tail latency percentiles (p50 / p95 / p99)
+- Thread-safe aggregation
+- Central metric registry
+- One-line instrumentation via macros
+- Human-readable and CSV reporting
+- Compile-time enable / disable (zero runtime overhead when off)
 
-Latency is measured using an RAII-based `ScopedTimer`.
-Timing starts on construction and is recorded on destruction,
-ensuring correctness even with early returns or exceptions.
+---
 
-## Metric Aggregation
+## Example Usage
 
-Latency samples are aggregated using online statistics
-(Welford’s algorithm), avoiding storage of raw samples.
-
-Metrics tracked:
-- Count
-- Min / Max
-- Mean
-- Variance
-
-Aggregation is thread-safe in V1 using a mutex-based sink.
-
-## Tail Latency Analysis
-
-The profiler computes p50 / p95 / p99 latency using a
-fixed-bucket histogram to avoid storing raw samples.
-
-Percentiles are reported conservatively using bucket
-upper bounds to prevent underestimating tail latency.
-
-In V1 the buckets and bucket size is hardcoded
-TODO: enable user to configure buckets and bucket size
-
-## Reporting
-
-Profiling results are exported via immutable snapshots.
-Reporting is fully decoupled from measurement and aggregation,
-ensuring no impact on hot-path latency.
-
-Supported formats:
-- Human-readable text
-- CSV (for offline analysis)
-
-## Instrumentation
-
-Profiling is enabled using a single macro:
-
-    PROFILER_SCOPE("Component::Operation");
-
-Metrics are collected automatically and can be dumped
-at shutdown via the global registry.
-
-Profiling can be completely compiled out by omitting
-`PROFILER_ENABLE`.
-
+### Instrumentation
 
 ```cpp
-// pseudo: include the public header (implementation pending)
-#include "latency_metrics.h"
+#include "macros.hpp"
 
-void processOrder() {
-    // start timing automatically at construction, stop at scope exit
-    latency_metrics::ScopedTimer timer("OrderBook::AddOrder");
-    // ... hot-path work ...
+void TestFunction() {
+    PROFILER_SCOPE("Profile::TestFunction");
+    // hot path logic
 }
+````
 
-// At end-of-run, dump aggregated reports:
-latency_metrics::Registry::Instance().DumpText(std::cout);
-latency_metrics::Registry::Instance().WriteCsv("latency_report.csv");
+### Reporting at Shutdown
+
+```cpp
+#include "metric_registry.hpp"
+
+Profiler::MetricRegistry::DumpAll(std::cout);
+
+std::ofstream csv("latency.csv");
+Profiler::MetricRegistry::DumpAllCsv(csv);
 ```
 
-Note: APIs above are illustrative and follow the V1 DESIGN.md intent (see DESIGN.md for exact API decisions).
+---
 
-## Example output
+## Example Output
+
+### Human-Readable
+
+```text
+[Profiler] Profile::TestFunction
+  Count   : 4,812,903
+  Mean(ns): 410
+  Min(ns) : 120
+  Max(ns) : 8400
+  P50(ns) : 500
+  P95(ns) : 720
+  P99(ns) : 1900
 ```
-[Latency] OrderBook::AddOrder
-Count: 4,812,903
-Mean: 410 ns
-StdDev: 120 ns
-p50: 390 ns
-p95: 720 ns
-p99: 1.9 µs
-Max: 8.4 µs
+
+### CSV
+
+```csv
+metric,count,mean_ns,variance_ns,min_ns,max_ns,p50_ns,p95_ns,p99_ns
+OrderBook::AddOrder,4812903,410,1.2e5,120,8400,500,720,1900
 ```
 
-CSV output should contain one row per measured scope with columns such as: name, count, min_ns, max_ns, mean_ns, stddev_ns, p50_ns, p95_ns, p99_ns.
+---
 
-## Build & integration
-- Header-first design for easy inclusion in existing projects.
-- Provide an optional small .cpp for heavier aggregation/reporting code.
-- Intended to work with CMake; no third-party dependencies (minimal STL only).
+## Compile-Time Control
 
-## Where to look next
-- See DESIGN.md for the full V1 scope, non-scope items, and the versioned roadmap (V2..V4).
-- Next implementation steps:
-  - Implement a header-only ScopedTimer and fixed-bucket histogram with nanosecond storage.
-  - Provide a simple Registry for aggregation and text/CSV exporters.
-  - Add unit tests and a small CMake example project.
+Profiling can be fully compiled out.
+
+```cmake
+target_compile_definitions(${TARGET_NAME} PRIVATE include)
+```
+
+If `PROFILER_ENABLE` is not defined, all profiling code is removed at compile
+time with zero runtime overhead.
+
+---
+
+## Design Principles
+
+* Measurement, aggregation, and reporting are strictly separated
+* No I/O or formatting on hot paths
+* Deterministic memory usage
+* Conservative tail-latency reporting
+* Explicit ownership and lifetimes
+* Correctness before optimization
+
+---
+
+## Version Roadmap
+
+### V2 — Scalability & Contention Elimination
+
+* Thread-local metric sinks
+* Lock-free or low-contention aggregation
+* Stable p99 under high concurrency
+
+### V3 — High-Precision Timing
+
+* Optional `rdtsc` / `rdtscp` backend
+* Calibration to nanoseconds
+* Pluggable clock strategies
+
+### V4 — Advanced Percentiles
+
+* HDR or logarithmic histograms
+* p99.9 / p99.99
+* Distribution-level analysis
+
+### V5 — Tooling & Regression Detection
+
+* Baseline comparison
+* Performance regression detection
+* CI integration
+* Optional JSON export
+
+---
+
+## Non-Goals
+
+* Live tracing or per-event logging
+* Distributed tracing
+* Background threads
+* Heavy runtime configuration
+* Observability dashboards
+
+This framework is intentionally focused on profiling, not tracing or
+observability.
+
+---
