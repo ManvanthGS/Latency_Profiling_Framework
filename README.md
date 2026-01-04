@@ -35,6 +35,17 @@ Metrics tracked:
 
 Aggregation is thread-safe in V1 using a mutex-based sink.
 
+## Tail Latency Analysis
+
+The profiler computes p50 / p95 / p99 latency using a
+fixed-bucket histogram to avoid storing raw samples.
+
+Percentiles are reported conservatively using bucket
+upper bounds to prevent underestimating tail latency.
+
+In V1 the buckets and bucket size is hardcoded
+TODO: enable user to configure buckets and bucket size
+
 
 ```cpp
 // pseudo: include the public header (implementation pending)

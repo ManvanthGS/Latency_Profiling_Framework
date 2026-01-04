@@ -19,6 +19,10 @@ MetricSnapshot MetricSink::Snapshot() const noexcept {
     snapshot.min_ns = stats_.Min();
     snapshot.max_ns = stats_.Max();
 
+    snapshot.p50_ns = histogram_.Percentile(50.0);
+    snapshot.p95_ns = histogram_.Percentile(95.0);
+    snapshot.p99_ns = histogram_.Percentile(99.0);
+
     return snapshot;
 }
 
