@@ -10,7 +10,7 @@ ScopedTimer::ScopedTimer(MetricSink& sink) noexcept
 ScopedTimer::~ScopedTimer() noexcept {
     const TimestampNs end_time_ns = Clock::Now();
     const TimestampNs elapsed_ns = end_time_ns - start_time_ns;
-    // sink_.Record(elapsed_ns);
+    sink_.Record(elapsed_ns);
 }
 
 } // namespace Profiler

@@ -5,18 +5,12 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-# Library Sources (Adding sources manually for readability)
-set(PROJECT_SOURCES
-    #sources
-    src/main.cpp
-    src/clock.cpp
-
-    #includes
-    include/clock.hpp
-)
+# Recurse .cpp and .hpp files
+file(GLOB_RECURSE CPP_SOURCES CONFIGURE_DEPENDS src/*.cpp)
+file(GLOB_RECURSE HPP_SOURCES CONFIGURE_DEPENDS include/*.hpp)
 
 # Add executable
-add_executable(profiling_framework ${PROJECT_SOURCES})
+add_executable(profiling_framework ${CPP_SOURCES} ${HPP_SOURCES})
 target_include_directories(profiling_framework PRIVATE include)
 
 # Enable Test Framework

@@ -22,6 +22,19 @@ Latency is measured using an RAII-based `ScopedTimer`.
 Timing starts on construction and is recorded on destruction,
 ensuring correctness even with early returns or exceptions.
 
+## Metric Aggregation
+
+Latency samples are aggregated using online statistics
+(Welford’s algorithm), avoiding storage of raw samples.
+
+Metrics tracked:
+- Count
+- Min / Max
+- Mean
+- Variance
+
+Aggregation is thread-safe in V1 using a mutex-based sink.
+
 
 ```cpp
 // pseudo: include the public header (implementation pending)

@@ -17,6 +17,10 @@ public:
     ScopedTimer(const ScopedTimer&) = delete;
     ScopedTimer& operator=(const ScopedTimer&) = delete;
 
+    // Non-movable
+    ScopedTimer(ScopedTimer&&) = delete;
+    ScopedTimer& operator=(ScopedTimer&&) = delete;
+
 private:
     MetricSink& sink_;
     TimestampNs start_time_ns;
