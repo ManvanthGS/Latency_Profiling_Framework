@@ -2,8 +2,10 @@
 #include "scoped_timer.hpp"
 #include "metric_sink.hpp"
 #include "reporter.hpp"
+#include "macros.hpp"
 #include <cassert>
 #include <iostream>
+#include <fstream>
 
 int main()
 {
@@ -18,25 +20,16 @@ int main()
 
     // Test scoped timer
     {
-        Profiler::MetricSink sink;
         {
-            Profiler::ScopedTimer timer(sink);
+            PROFILER_SCOPE("Test Metric");
             // Simulate some work
             for (int i = 0; i < 1000000; ++i);
         }
 
-        Profiler::MetricSnapshot snapshot = sink.Snapshot();
-        Profiler::Reporter::WriteHumanReadable(
-                "ScopedTimer Test",
-                snapshot,
-                std::cout
-            );
-        // Profiler::Reporter::WriteCsvHeader(csv_file);
-        // Profiler::Reporter::WriteCsvRow(
-        //     "ScopedTimer Test",
-        //     snapshot,
-        //     csv_file
-        // );
+        Profiler::MetricRegistry::DumpAll(std::cout);
+
+        std::ofstream csv("latency.csv");
+        Profiler::MetricRegistry::DumpAllCsv(csv);
     }
 
     return 0;

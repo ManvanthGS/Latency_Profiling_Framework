@@ -13,5 +13,8 @@ file(GLOB_RECURSE HPP_SOURCES CONFIGURE_DEPENDS include/*.hpp)
 add_executable(profiling_framework ${CPP_SOURCES} ${HPP_SOURCES})
 target_include_directories(profiling_framework PRIVATE include)
 
+# Define PROFILER_ENABLE for the target
+target_compile_definitions(profiling_framework PRIVATE PROFILER_ENABLE)
+
 # Enable Test Framework
 enable_testing()

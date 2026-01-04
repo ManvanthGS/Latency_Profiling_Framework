@@ -56,6 +56,18 @@ Supported formats:
 - Human-readable text
 - CSV (for offline analysis)
 
+## Instrumentation
+
+Profiling is enabled using a single macro:
+
+    PROFILER_SCOPE("Component::Operation");
+
+Metrics are collected automatically and can be dumped
+at shutdown via the global registry.
+
+Profiling can be completely compiled out by omitting
+`PROFILER_ENABLE`.
+
 
 ```cpp
 // pseudo: include the public header (implementation pending)
