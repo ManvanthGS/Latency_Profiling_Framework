@@ -1,0 +1,2 @@
+add_executable(profiler_overhead perf_overhead.cpp)
+target_link_libraries(profiler_overhead PRIVATE profiler)

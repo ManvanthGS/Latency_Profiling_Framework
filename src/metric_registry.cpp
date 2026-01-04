@@ -1,4 +1,4 @@
-#include "metric_registry.hpp"
+#include "profiler/metric_registry.hpp"
 
 namespace Profiler {
 

@@ -1,5 +1,5 @@
-#include "scoped_timer.hpp"
-#include "metric_sink.hpp"
+#include "profiler/scoped_timer.hpp"
+#include "profiler/metric_sink.hpp"
 
 namespace Profiler {
 

@@ -3,7 +3,7 @@
 #include <string>
 #include <ostream>
 
-#include "metric_sink.hpp"
+#include "profiler/metric_sink.hpp"
 
 namespace Profiler {
 

@@ -1,20 +1,30 @@
-cmake_minimum_required(VERSION 3.16)
-project(Latency_Profiling_Framework LANGUAGES CXX)
+cmake_minimum_required(VERSION 3.20)
+project(profiler LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-# Recurse .cpp and .hpp files
-file(GLOB_RECURSE CPP_SOURCES CONFIGURE_DEPENDS src/*.cpp)
-file(GLOB_RECURSE HPP_SOURCES CONFIGURE_DEPENDS include/*.hpp)
+option(PROFILER_ENABLE "Enable profiling" ON)
 
-# Add executable
-add_executable(profiling_framework ${CPP_SOURCES} ${HPP_SOURCES})
-target_include_directories(profiling_framework PRIVATE include)
+add_library(profiler STATIC
+    src/clock.cpp
+    src/scoped_timer.cpp
+    src/online_stats.cpp
+    src/latency_histogram.cpp
+    src/metric_sink.cpp
+    src/metric_registry.cpp
+    src/reporter.cpp
+)
 
-# Define PROFILER_ENABLE for the target
-target_compile_definitions(profiling_framework PRIVATE PROFILER_ENABLE)
+target_include_directories(profiler
+    PUBLIC
+        ${CMAKE_CURRENT_SOURCE_DIR}/include
+)
 
-# Enable Test Framework
-enable_testing()
+if(PROFILER_ENABLE)
+    target_compile_definitions(profiler PUBLIC PROFILER_ENABLE)
+endif()
+
+add_subdirectory(tests)
+add_subdirectory(benchmarks)
+add_subdirectory(demo)

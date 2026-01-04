@@ -1,4 +1,4 @@
-#include "latency_histogram.hpp"
+#include "profiler/latency_histogram.hpp"
 
 namespace Profiler {
 

@@ -1,8 +1,8 @@
-#include "clock.hpp"
-#include "scoped_timer.hpp"
-#include "metric_sink.hpp"
-#include "reporter.hpp"
-#include "macros.hpp"
+#include "profiler/clock.hpp"
+#include "profiler/scoped_timer.hpp"
+#include "profiler/metric_sink.hpp"
+#include "profiler/reporter.hpp"
+#include "profiler/macros.hpp"
 #include <cassert>
 #include <iostream>
 #include <fstream>

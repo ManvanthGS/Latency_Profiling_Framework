@@ -6,8 +6,8 @@
 #include <ostream>
 #include <memory>
 
-#include "metric_sink.hpp"
-#include "reporter.hpp"
+#include "profiler/metric_sink.hpp"
+#include "profiler/reporter.hpp"
 
 namespace Profiler {
 

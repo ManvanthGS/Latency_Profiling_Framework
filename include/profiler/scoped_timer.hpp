@@ -2,7 +2,7 @@
 
 #include <cstdint>
 
-#include "clock.hpp"
+#include "profiler/clock.hpp"
 
 namespace Profiler {
 

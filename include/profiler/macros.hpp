@@ -1,7 +1,7 @@
 #pragma once
 
-#include "scoped_timer.hpp"
-#include "metric_registry.hpp"
+#include "profiler/scoped_timer.hpp"
+#include "profiler/metric_registry.hpp"
 
 // Compile-time switch
 #ifdef PROFILER_ENABLE

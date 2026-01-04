@@ -3,8 +3,8 @@
 #include <cstdint>
 #include <mutex>
 
-#include "latency_histogram.hpp"
-#include "online_stats.hpp"
+#include "profiler/latency_histogram.hpp"
+#include "profiler/online_stats.hpp"
 
 namespace Profiler
 {
