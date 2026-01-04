@@ -12,3 +12,17 @@ TEST(ScopedTimer, RecordsExactlyOnce) {
     auto snapshot = sink.Snapshot();
     EXPECT_EQ(snapshot.count, 1u);
 }
+
+TEST(ScopedTimerTest, WorksWithEarlyReturn) {
+    Profiler::MetricSink sink;
+
+    auto func = [&]() {
+        Profiler::ScopedTimer timer(sink);
+        return;
+    };
+
+    func();
+
+    auto snapshot = sink.Snapshot();
+    EXPECT_EQ(snapshot.count, 1u);
+}

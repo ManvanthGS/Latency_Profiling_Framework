@@ -14,6 +14,7 @@ add_executable(profiler_tests
     test_latency_histogram.cpp
     test_metric_registry.cpp
     test_macros.cpp
+    test_metric_sink.cpp
 )
 
 target_link_libraries(profiler_tests

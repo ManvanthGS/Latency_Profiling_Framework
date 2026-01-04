@@ -2,13 +2,13 @@
 #include "profiler/macros.hpp"
 #include "profiler/metric_registry.hpp"
 
-TEST(Macros, ProfilerScopeDoesNotCrash) {
+TEST(MacroTest, ProfilerScopeRecords) {
     {
-        PROFILER_SCOPE("MacroTest");
+        PROFILER_SCOPE("Macro::Test");
     }
 
     auto snapshot =
-        Profiler::MetricRegistry::GetSink("MacroTest").Snapshot();
+        Profiler::MetricRegistry::GetSink("Macro::Test").Snapshot();
 
     EXPECT_EQ(snapshot.count, 1u);
 }

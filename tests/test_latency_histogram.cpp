@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
 #include "profiler/latency_histogram.hpp"
 
-TEST(LatencyHistogram, PercentilesMonotonic) {
+TEST(LatencyHistogramTest, PercentilesMonotonic) {
     Profiler::LatencyHistogram hist;
 
     for (int i = 0; i < 1000; ++i)
@@ -13,4 +13,9 @@ TEST(LatencyHistogram, PercentilesMonotonic) {
 
     EXPECT_LE(p50, p95);
     EXPECT_LE(p95, p99);
+}
+
+TEST(LatencyHistogramTest, EmptyHistogramSafe) {
+    Profiler::LatencyHistogram hist;
+    EXPECT_EQ(hist.Percentile(99.0), 0u);
 }
